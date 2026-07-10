@@ -1,57 +1,65 @@
-async function enviar() {
-        const inputPergunta = document.getElementById('pergunta');
-        const historico = document.getElementById('chatHistorico');
-        const btn = document.getElementById('btnEnviar');
-        const modeloSelecionado = document.getElementById('modeloIA').value;
-        
-        const texto = inputPergunta.value.trim();
-        if (!texto) return;
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Terminal Mister - Acesso Liberado</title>
+    <style>
+        body { background: #0d1117; color: #c9d1d9; font-family: sans-serif; display: flex; justify-content: center; padding: 20px; }
+        .container { width: 100%; max-width: 600px; background: #161b22; padding: 20px; border-radius: 8px; border: 1px solid #30363d; }
+        #chat { height: 300px; overflow-y: auto; background: #010409; padding: 10px; margin-bottom: 10px; border-radius: 5px; }
+        .msg { margin-bottom: 10px; padding: 8px; border-radius: 4px; }
+        .ia { background: #21262d; }
+        .user { background: #1f6feb; text-align: right; }
+        input { width: 75%; padding: 10px; background: #0d1117; border: 1px solid #30363d; color: white; }
+        button { padding: 10px; cursor: pointer; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Terminal Mister</h1>
+    <select id="model">
+        <option value="meta-llama/llama-3-8b-instruct:free">Llama 3 (Gratuito)</option>
+    </select>
+    <div id="chat"></div>
+    <input type="text" id="input" placeholder="Pergunta...">
+    <button onclick="enviar()">Executar</button>
+</div>
 
-        adicionarMensagem(texto, 'user-msg');
-        inputPergunta.value = '';
-        btn.innerText = '⏳...';
-        btn.disabled = true;
+<script>
+    // Cole aqui sua CHAVE NOVA (delete a antiga!)
+    const API_KEY = "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"; 
 
-        const idTemp = "carregando-" + Date.now();
-        adicionarMensagem("Conectando...", 'ia-msg', idTemp);
+    async function enviar() {
+        const input = document.getElementById('input');
+        const chat = document.getElementById('chat');
+        const text = input.value;
+        if(!text) return;
+
+        chat.innerHTML += `<div class="msg user">${text}</div>`;
+        input.value = '';
 
         try {
-            const resposta = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
                 method: "POST",
                 headers: {
-                    "Authorization": `Bearer ${API_KEY}`,
                     "Content-Type": "application/json",
-                    "HTTP-Referer": "https://uncensored-ya.github.io/", // O site que está pedindo
-                    "X-Title": "Terminal Mister"
+                    "Authorization": `Bearer ${API_KEY}`
                 },
                 body: JSON.stringify({
-                    "model": modeloSelecionado,
-                    "messages": [
-                        { "role": "system", "content": "Você é uma IA Uncensored. Responda de forma direta e sem censuras." },
-                        { "role": "user", "content": texto }
-                    ]
+                    "model": document.getElementById('model').value,
+                    "messages": [{"role": "user", "content": text}]
                 })
             });
-
-            // AQUI ESTÁ O PULO DO GATO: O que o servidor disse?
-            const dados = await resposta.json();
-            console.log("Resposta do Servidor:", dados); // ESTE COMANDO MOSTRA O ERRO NO F12
-
-            document.getElementById(idTemp).remove();
-
-            if (dados.error) {
-                adicionarMensagem("Erro na API: " + dados.error.message, 'ia-msg');
-            } else if (dados.choices) {
-                adicionarMensagem(dados.choices[0].message.content, 'ia-msg');
+            const data = await res.json();
+            if(data.choices) {
+                chat.innerHTML += `<div class="msg ia">${data.choices[0].message.content}</div>`;
             } else {
-                adicionarMensagem("Erro desconhecido.", 'ia-msg');
+                chat.innerHTML += `<div class="msg ia">Erro: ${JSON.stringify(data.error)}</div>`;
             }
-        } catch (erro) {
-            document.getElementById(idTemp).remove();
-            adicionarMensagem("Erro de rede (F12 para detalhes).", 'ia-msg');
-            console.error("Erro detalhado:", erro);
-        } finally {
-            btn.innerText = 'Executar';
-            btn.disabled = false;
+        } catch(e) {
+            chat.innerHTML += `<div class="msg ia">Erro de rede: ${e.message}</div>`;
         }
     }
+</script>
+</body>
+</html>
