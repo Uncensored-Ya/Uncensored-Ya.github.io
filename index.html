@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Terminal Mister - Arena IA</title>
     <style>
-        /* Estilos e Design */
         body { font-family: 'Courier New', Courier, monospace; background-color: #0d1117; color: #c9d1d9; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         .container { width: 100%; max-width: 1200px; background: #161b22; padding: 25px; border-radius: 10px; border: 1px solid #30363d; box-shadow: 0 10px 30px rgba(0,0,0,0.8); box-sizing: border-box; }
         h1 { color: #58a6ff; text-align: center; margin-top: 0; border-bottom: 1px solid #30363d; padding-bottom: 15px; letter-spacing: 2px; }
@@ -19,7 +18,6 @@
         select:focus, input:focus, textarea:focus { border-color: #58a6ff; outline: none; }
         textarea { resize: vertical; min-height: 60px; color: #ff7b72; }
 
-        /* Estilo da Arena */
         .arena { display: flex; gap: 20px; margin-bottom: 20px; }
         .arena-side { flex: 1; display: flex; flex-direction: column; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 15px; }
         .arena-title { text-align: center; color: #d2a8ff; margin-top: 0; margin-bottom: 15px; font-size: 1.1em; border-bottom: 1px solid #30363d; padding-bottom: 10px; }
@@ -51,14 +49,14 @@
             <div class="config-item">
                 <label>1. Provedor de Servidor:</label>
                 <select id="provedorSelect" onchange="atualizarModelos()">
-                    <option value="google">🔵 Google AI Studio (Gemini - Grátis & Estável)</option>
+                    <option value="google">🔵 Google AI Studio (Gemini - Nativo & Uncensored)</option>
                     <option value="groq">⚡ Groq (Llama 3 - Muito Rápido & Gratuito)</option>
                     <option value="openrouter">🌐 OpenRouter (Modelos Diversos)</option>
                 </select>
             </div>
             <div class="config-item">
                 <label>2. Chave da API:</label>
-                <input type="password" id="apiKeyInput" placeholder="Cole a chave do servidor escolhido aqui...">
+                <input type="password" id="apiKeyInput" placeholder="Cole sua chave aqui...">
             </div>
         </div>
         
@@ -100,8 +98,7 @@
             { id: "mixtral-8x7b-32768", nome: "Mixtral 8x7B (Lógica Avançada)" }
         ],
         openrouter: [
-            { id: "cognitivecomputations/dolphin-mistral-24b-venice-edition:free", nome: "🐬 Dolphin Venice (Grátis/Uncensored)" },
-            { id: "google/gemma-2-9b-it:free", nome: "Google Gemma 2 (Grátis)" }
+            { id: "cognitivecomputations/dolphin-mistral-24b-venice-edition:free", nome: "🐬 Dolphin Venice (Grátis)" }
         ]
     };
 
@@ -140,12 +137,6 @@
         }
         if (!texto) return;
 
-        // Configura a URL dependendo do provedor
-        let apiUrl = "";
-        if (provedor === 'google') apiUrl = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-        else if (provedor === 'groq') apiUrl = "https://api.groq.com/openai/v1/chat/completions";
-        else if (provedor === 'openrouter') apiUrl = "https://openrouter.ai/api/v1/chat/completions";
-
         adicionarMensagem(texto, 'user-msg', 'chatA');
         adicionarMensagem(texto, 'user-msg', 'chatB');
         inputPergunta.value = '';
@@ -159,32 +150,70 @@
 
         const dispararAPI = async (idModelo, chatContainer, idLoad) => {
             try {
-                const resposta = await fetch(apiUrl, {
-                    method: "POST",
-                    headers: {
-                        "Authorization": `Bearer ${inputApiKey}`,
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        "model": idModelo,
-                        "messages": [
-                            { "role": "system", "content": systemPrompt },
-                            { "role": "user", "content": texto }
-                        ]
-                    })
-                });
+                let resposta, dados, textoResposta;
 
-                const dados = await resposta.json();
-                document.getElementById(idLoad).remove();
-
-                if (resposta.ok && dados.choices) {
-                    adicionarMensagem(dados.choices[0].message.content, 'ia-msg', chatContainer);
+                if (provedor === 'google') {
+                    // API NATIVA DO GEMINI COM FILTROS DESLIGADOS (BLOCK_NONE)
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${idModelo}:generateContent?key=${inputApiKey}`;
+                    resposta = await fetch(url, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            systemInstruction: { parts: [{ text: systemPrompt }] },
+                            contents: [{ role: "user", parts: [{ text: texto }] }],
+                            safetySettings: [
+                                { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+                                { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+                                { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+                                { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+                            ]
+                        })
+                    });
+                    
+                    dados = await resposta.json();
+                    
+                    if (resposta.ok && dados.candidates && dados.candidates.length > 0) {
+                        if (dados.candidates[0].content) {
+                            textoResposta = dados.candidates[0].content.parts[0].text;
+                        } else {
+                            throw new Error("O Google bloqueou essa resposta por ser extrema demais, mesmo com os filtros no mínimo.");
+                        }
+                    } else {
+                        throw new Error(dados.error?.message || "Erro desconhecido na API do Google.");
+                    }
+                    
                 } else {
-                    adicionarMensagem(`Bloqueado ou Erro: O sistema da IA recusou a resposta ou a API falhou. (${dados.error?.message || 'Erro Desconhecido'})`, 'error-msg', chatContainer);
+                    // PADRÃO PARA GROQ E OPENROUTER
+                    const apiUrl = provedor === 'groq' ? "https://api.groq.com/openai/v1/chat/completions" : "https://openrouter.ai/api/v1/chat/completions";
+                    resposta = await fetch(apiUrl, {
+                        method: "POST",
+                        headers: {
+                            "Authorization": `Bearer ${inputApiKey}`,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            "model": idModelo,
+                            "messages": [
+                                { "role": "system", "content": systemPrompt },
+                                { "role": "user", "content": texto }
+                            ]
+                        })
+                    });
+                    
+                    dados = await resposta.json();
+                    if (resposta.ok && dados.choices && dados.choices.length > 0) {
+                        textoResposta = dados.choices[0].message.content;
+                    } else {
+                        throw new Error(dados.error?.message || "Falha na resposta do servidor.");
+                    }
                 }
+
+                document.getElementById(idLoad).remove();
+                adicionarMensagem(textoResposta, 'ia-msg', chatContainer);
+
             } catch (erro) {
                 document.getElementById(idLoad).remove();
-                adicionarMensagem("Erro Crítico de Rede.", 'error-msg', chatContainer);
+                adicionarMensagem(`Erro: ${erro.message}`, 'error-msg', chatContainer);
             }
         };
 
