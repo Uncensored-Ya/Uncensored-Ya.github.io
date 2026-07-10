@@ -153,11 +153,14 @@
                 let resposta, dados, textoResposta;
 
                 if (provedor === 'google') {
-                    // API NATIVA DO GEMINI COM FILTROS DESLIGADOS (BLOCK_NONE)
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${idModelo}:generateContent?key=${inputApiKey}`;
+                    // MUDANÇA AQUI: Enviando a chave no Cabeçalho (x-goog-api-key)
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${idModelo}:generateContent`;
                     resposta = await fetch(url, {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
+                        headers: { 
+                            "Content-Type": "application/json",
+                            "x-goog-api-key": inputApiKey
+                        },
                         body: JSON.stringify({
                             systemInstruction: { parts: [{ text: systemPrompt }] },
                             contents: [{ role: "user", parts: [{ text: texto }] }],
@@ -176,14 +179,14 @@
                         if (dados.candidates[0].content) {
                             textoResposta = dados.candidates[0].content.parts[0].text;
                         } else {
-                            throw new Error("O Google bloqueou essa resposta por ser extrema demais, mesmo com os filtros no mínimo.");
+                            throw new Error("O Google bloqueou essa resposta por ser extrema demais.");
                         }
                     } else {
                         throw new Error(dados.error?.message || "Erro desconhecido na API do Google.");
                     }
                     
                 } else {
-                    // PADRÃO PARA GROQ E OPENROUTER
+                    // GROQ E OPENROUTER
                     const apiUrl = provedor === 'groq' ? "https://api.groq.com/openai/v1/chat/completions" : "https://openrouter.ai/api/v1/chat/completions";
                     resposta = await fetch(apiUrl, {
                         method: "POST",
