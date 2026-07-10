@@ -39,11 +39,12 @@
         <label>Chave API OpenRouter (Segurança Máxima):</label>
         <input type="password" id="apiKeyInput" placeholder="sk-or-v1-................................">
         
-        <label>Selecione a Rede Neural (Modelos Uncensored):</label>
+        <label>Selecione a Rede Neural (Modelos Gratuitos):</label>
         <select id="modeloIA">
-            <option value="nousresearch/hermes-2-pro-llama-3-8b">🧠 Hermes 2 Pro Llama 3 8B (Rápida e Direta)</option>
-            <option value="cognitivecomputations/dolphin-mixtral-8x7b">⚙️ Dolphin Mixtral 8x7B (Lógica Complexa)</option>
-            <option value="gryphe/mythomax-l2-13b">🐉 MythoMax L2 13B (Excelente para Uncensored)</option>
+            <!-- Os modelos 100% gratuitos que estão funcionando hoje -->
+            <option value="cognitivecomputations/dolphin-mistral-24b-venice-edition:free">🐬 Dolphin Mistral 24B Venice (Gratuito & Uncensored)</option>
+            <option value="nousresearch/hermes-3-llama-3.1-405b:free">🧠 Hermes 3 Llama 3.1 405B (Gratuito)</option>
+            <option value="meta-llama/llama-3-8b-instruct:free">🦙 Llama 3 8B Instruct (Gratuito)</option>
         </select>
     </div>
 
@@ -110,7 +111,7 @@
             } else if (resposta.status === 401) {
                 adicionarMensagem("Erro 401: Chave API Inválida. Verifique se copiou a chave corretamente.", 'error-msg');
             } else if (resposta.status === 402) {
-                adicionarMensagem("Erro 402: Seus créditos na OpenRouter acabaram.", 'error-msg');
+                adicionarMensagem("Erro 402: Seus créditos na OpenRouter acabaram. Tente selecionar uma IA com o final ':free'.", 'error-msg');
             } else {
                 adicionarMensagem(`Erro na API: ${dados.error?.message || 'Falha desconhecida'}`, 'error-msg');
             }
